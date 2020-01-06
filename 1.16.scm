@@ -1,0 +1,6 @@
+(define (expt b n)
+  (define (iter a b c)
+    (cond ((= c 0) a)
+          ((even? c) (iter a (* b b) (/ c 2)))
+          (else (iter (* a b) b (- c 1)))))
+  (iter 1 b n))
