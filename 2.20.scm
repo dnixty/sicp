@@ -1,0 +1,12 @@
+(define (same-parity x . y)
+  (define (same-parity? n)
+    (= (modulo n 2) 0))
+  (define (recursive values n)
+    (cond ((null? values) values)
+          ((same-parity? n)
+           (cons (car values) (recursive (cdr values) (+ n 1))))
+          (else (recursive (cdr values) (+ n 1)))))
+  (recursive (cons x y) 0))
+
+(same-parity 1 2 3 4 5 6 7)
+(same-parity 2 3 4 5 6 7)
