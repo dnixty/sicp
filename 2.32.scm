@@ -1,0 +1,90 @@
+(define (subsets s)
+  (if (null? s)
+      (list '())
+      (let ((rest (subsets (cdr s))))
+        (append rest (map (lambda (x)
+                            (cons (car s) x))
+                          rest)))))
+
+(subsets '(1 2 3))
+;; (() (3) (2) (2 3) (1) (1 3) (1 2) (1 2 3))
+
+;; This procedure works because it appends the set of all subsets
+;; excluding the first number with the set of all subsets excluding
+;; the first number, with the first number re-inserted into each
+;; subset.
+
+;; (subsets '(1 2 3))
+;;
+;; (append (subsets '(2 3))
+;;         (map (lambda (x) (cons 1 x))
+;;              (subsets '(2 3))))
+;;
+;; (append (append (subsets '(3))
+;;                 (map (lambda (x) (cons 2 x))
+;;                      (subsets '(3))))
+;;         (map (lambda (x) (cons 1 x))
+;;              (append (subsets '(3))
+;;                      (map (lambda (x) (cons 2 x))
+;;                           (subsets '(3))))))
+;;
+;; (append (append (append (subsets '())
+;;                         (map (lambda (x) (cons 3 x))
+;;                              (subsets '())))
+;;                 (map (lambda (x) (cons 2 x))
+;;                      (append (subsets '())
+;;                              (map (lambda (x) (cons 3 x))
+;;                                   (subsets '()))))
+;;         (map (lambda (x) (cons 1 x))
+;;              (append (append (subsets '())
+;;                              (map (lambda (x) (cons 3 x))
+;;                                   (subsets '())))
+;;                      (map (lambda (x) (cons 2 x))
+;;                           (append (subsets '())
+;;                              (map (lambda (x) (cons 3 x))
+;;                                   (subsets '()))))))))
+;;
+;; (append (append (append '(())
+;;                         (map (lambda (x) (cons 3 x))
+;;                              '(())))
+;;                 (map (lambda (x) (cons 2 x))
+;;                      (append '(())
+;;                              (map (lambda (x) (cons 3 x))
+;;                                   '(()))))
+;;         (map (lambda (x) (cons 1 x))
+;;              (append (append '(())
+;;                              (map (lambda (x) (cons 3 x))
+;;                                   '(())))
+;;                      (map (lambda (x) (cons 2 x))
+;;                           (append '(())
+;;                              (map (lambda (x) (cons 3 x))
+;;                                   '(()))))))))
+;;
+;; (append (append (append '(()) '((3)))
+;;                 (map (lambda (x) (cons 2 x))
+;;                      (append '(()) '((3))))
+;;         (map (lambda (x) (cons 1 x))
+;;              (append (append '(()) '((3)))
+;;                      (map (lambda (x) (cons 2 x))
+;;                           (append '(()) '((3))))))))
+;;
+;; (append (append '(() (3))
+;;                 (map (lambda (x) (cons 2 x))
+;;                      '(() (3)))
+;;         (map (lambda (x) (cons 1 x))
+;;              (append '(() (3))
+;;                      (map (lambda (x) (cons 2 x))
+;;                           '(() (3)))))))
+;;
+;; (append (append '(() (3)) '((2) (2 3)))
+;;         (map (lambda (x) (cons 1 x))
+;;              (append '(() (3)) '((2) (2 3)))))
+;;
+;; (append '(() (3) (2) (2 3))
+;;         (map (lambda (x) (cons 1 x))
+;;              '(() (3) (2) (2 3))))
+;;
+;; (append '(() (3) (2) (2 3))
+;;         '((1) (1 3) (1 2) (1 2 3)))
+;;
+;; '(() (3) (2) (2 3) (1) (1 3) (1 2) (1 2 3))
