@@ -1,0 +1,26 @@
+(define (encode message tree)
+  (if (null? message)
+      '()
+      (append
+       (encode-symbol (car message)
+                      tree)
+       (encode (cdr message) tree))))
+
+(define (element-of-set? x set)
+  (cond ((null? set) false)
+        ((equal? x (car set)) true)
+        (else (element-of-set? x (cdr set)))))
+
+(define (encode-symbol symbol tree)
+  (define (search current-branch result)
+    (cond ((and (leaf? current-branch)
+                (eq? symbol (symbol-leaf current-branch)))
+           result)
+          ((element-of-set? symbol (symbols (left-branch current-branch)))
+           (search (left-branch current-branch) (append result '(0))))
+          ((element-of-set? symbol (symbols (right-branch current-branch)))
+           (search (right-branch current-branch) (append result '(1))))
+          (else (error "Symbol doesn't exist in the tree"))))
+  (search tree '()))
+
+;; The order of growth in the number of steps needed to encode  a symbol is Θ(n^2)
