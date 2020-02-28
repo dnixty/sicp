@@ -49,8 +49,6 @@
        (lambda (x y) (tag (* x y))))
   (put 'div '(scheme-number scheme-number)
        (lambda (x y) (tag (/ x y))))
-  (put 'equ? '(scheme-number scheme-number)
-       (lambda (x y) (eq? x y)))
   (put '=zero? '(scheme-number)
        (lambda (x) (eq? x 0)))
   (put 'make 'scheme-number
@@ -59,6 +57,10 @@
        (lambda (x) (tag (- x))))
   (put 'raise 'scheme-number
        (lambda (x) (make-rational x 1)))
+  (put 'project '(scheme-number)
+       (lambda (x) (make-scheme-number x)))
+  (put 'equ? '(scheme-number scheme-number)
+       (lambda (x y) (eq? x y)))
   'done)
 
 (define (install-polynomial-package)
@@ -176,11 +178,21 @@
   (define (make-rat n d)
     (let ((g (gcd n d)))
       (cons (/ n g) (/ d g))))
+  (define (equ-rat? x y)
+    (= (* (numer x) (denom y))
+       (* (numer y) (denom x))))
   (define (tag x) (attach-tag 'rational x))
   (put 'make 'rational
        (lambda (n d) (tag (make-rat n d))))
   (put 'raise 'rational
        (lambda (x) (make-real (/ (numer x) (denom x)))))
+  (put 'project '(rational)
+       (lambda (x)
+         (make-scheme-number (car
+                              (integer-divide (numer x)
+                                              (denom x))))))
+  (put 'equ? '(rational rational)
+       (lambda (x y) (equ-rat? x y)))
   'done)
 
 (define (install-real-package)
@@ -192,9 +204,16 @@
        (lambda (x) (tag (make-real x))))
   (put 'raise 'real
        (lambda (x) (make-complex-from-real-imag x 0)))
+  (put 'project '(real)
+       (lambda (x)
+         (make-rational (round x) 1)))
+  (put 'equ? '(real real)
+       (lambda (x y) (eq? x y)))
   'done)
 
 (define (install-rectangular-package)
+  (define (real-part z) (car z))
+  (define (imag-part z) (cdr z))
   (define (make-from-real-imag x y)
     (cons x y))
   (define (make-from-mag-ang r a)
@@ -207,9 +226,21 @@
   (put 'make-from-mag-ang 'rectangular
        (lambda (r a)
          (tag (make-from-mag-ang r a))))
+  (put 'project '(rectangular)
+       (lambda (x)
+         (make-real (real-part x))))
+  (put 'equ? '(rectangular rectangular)
+       (lambda (x y) (and (= (real-part x) (real-part y))
+                          (= (imag-part x) (imag-part y)))))
   'done)
 
 (define (install-polar-package)
+  (define (magnitude z) (car z))
+  (define (angle z) (cdr z))
+  (define (real-part z)
+    (* (magnitude z) (cos (angle z))))
+  (define (imag-part z)
+    (* (magnitude z) (sin (angle z))))
   (define (make-from-mag-ang r a) (cons r a))
   (define (make-from-real-imag x y)
     (cons (sqrt (+ (square x) (square y)))
@@ -221,6 +252,12 @@
   (put 'make-from-mag-ang 'polar
        (lambda (r a)
          (tag (make-from-mag-ang r a))))
+  (put 'project '(polar)
+       (lambda (x)
+         (make-real (real-part x))))
+  (put 'equ? '(polar polar)
+       (lambda (x y) (and (= (magnitude x) (magnitude y))
+                          (= (angle x) (angle y)))))
   'done)
 
 (define (install-complex-package)
@@ -240,7 +277,11 @@
          (tag (make-from-mag-ang r a))))
   (put 'raise 'complex
        (lambda (x) (make-polynomial 'fallback-var
-                                    (list (0 x)))))
+                                    (list (list 0 (drop x))))))
+  (put 'project '(complex)
+       (lambda (x)
+         (apply-generic 'project x)))
+  (put 'equ? '(complex complex) equ?)
   'done)
 
 (define (raise x)
@@ -318,6 +359,15 @@
   (apply-generic 'minus x))
 (define (sub x y)
   (apply-generic 'add x (minus y)))
+(define (equ? x y) (apply-generic 'equ? x y))
+(define (project x)
+  (apply-generic 'project x))
+(define (drop x)
+  (let ((projected (project x)))
+    (cond ((equal? projected x) x)
+          ((equ? (raise projected) x)
+           (drop projected))
+          (else x))))
 
 (define (variable<? v1 v2)
   (string<? (symbol->string v1) (symbol->string v2)))
@@ -336,6 +386,7 @@
                                      (list 1
                                            (make-polynomial 'y (list (list 2 n1)))))))
 
+(define c1 (make-complex-from-real-imag 1 0))
 ;; 2x
 ;; 3y
 
