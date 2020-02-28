@@ -57,6 +57,10 @@
        (lambda (x) (tag x)))
   (put 'minus '(scheme-number)
        (lambda (x) (tag (- x))))
+  (put 'raise 'scheme-number
+       (lambda (x) (make-rational x 1)))
+  (put 'greatest-common-divisor '(scheme-number scheme-number)
+       (lambda (x y) (gcd x y)))
   'done)
 
 (define (install-polynomial-package)
@@ -84,6 +88,10 @@
   (define (make-term order coeff) (list order coeff))
   (define (order term) (car term))
   (define (coeff term) (cadr term))
+  (define (normalize p v)
+    (make-poly v (adjoin-term
+                  (make-term 0 (tag p))
+                  (the-empty-termlist))))
 
   ;; procedures used by add-poly
   (define (add-poly p1 p2)
@@ -93,6 +101,7 @@
                               (term-list p2)))
         (error "Polys not in same var -- ADD-POLY"
                (list p1 p2))))
+
   (define (add-terms L1 L2)
     (cond ((empty-termlist? L1) L2)
           ((empty-termlist? L2) L1)
@@ -119,6 +128,7 @@
                               (term-list p2)))
         (error "Polys not in same var -- MUL-POLY"
                (list p1 p2))))
+
   (define (mul-terms L1 L2)
     (if (empty-termlist? L1)
         (the-empty-termlist)
@@ -132,7 +142,18 @@
            (make-term (+ (order t1) (order t2))
                       (mul (coeff t1) (coeff t2)))
            (mul-term-by-all-terms t1 (rest-terms L))))))
-
+  (define (gcd-terms a b)
+    (if (empty-termlist? b)
+        a
+        (gcd-terms b (remainder-terms a b))))
+  (define (gcd-poly p1 p2)
+    (if (same-variable? (variable p1) (variable p2))
+        (make-poly (variable p1)
+                   (gcd-terms (term-list p1) (term-list p2)))
+        (error "Polys not in same var -- GCD-POLY"
+               (list p1 p2))))
+  (define (remainder-terms L1 L2)
+    (cadr (div-terms L1 L2)))
   (define (div-poly p1 p2)
     (if (same-variable? (variable p1) (variable p2))
         (let ((result (div-terms (term-list p1)
@@ -196,6 +217,51 @@
        (lambda (p)
          (tag (make-poly (variable p)
                          (minus-all-terms (term-list p))))))
+  (put 'greatest-common-divisor '(polynomial polynomial)
+       (lambda (p1 p2) (tag (gcd-poly p1 p2))))
+  'done)
+
+(define (install-rational-package)
+  (define (numer x) (car x))
+  (define (denom x) (cadr x))
+  (define (make-rat n d)
+    (list n d))
+  (define (add-rat x y)
+    (make-rat (add (mul (numer x) (denom y))
+                 (mul (numer y) (denom x)))
+              (add (denom x) (denom y))))
+  (define (sub-rat x y)
+    (make-rat (sub (mul (numer x) (denom y))
+                 (mul (numer y) (denom x)))
+              (mul (denom x) (denom y))))
+  (define (mul-rat x y)
+    (make-rat (mul (numer x) (numer y))
+              (mul (denom x) (denom y))))
+  (define (div-rat x y)
+    (make-rat (mul (numer x) (denom y))
+              (mul (denom x) (numer y))))
+  (define (equ-rat? x y)
+    (= (mul (numer x) (denom y))
+       (mul (numer y) (denom x))))
+  (define (=zero-rat? x)
+    (= (numer x) 0))
+  (define (tag x) (attach-tag 'rational x))
+  (put 'add '(rational rational)
+       (lambda (x y) (tag (add-rat x y))))
+  (put 'sub '(rational rational)
+       (lambda (x y) (tag (sub-rat x y))))
+  (put 'mul '(rational rational)
+       (lambda (x y) (tag (mul-rat x y))))
+  (put 'div '(rational rational)
+       (lambda (x y) (tag (div-rat x y))))
+  (put 'equ? '(rational rational)
+       (lambda (x y) (equ-rat? x y)))
+  (put '=zero? '(rational)
+       (lambda (x) (=zero-rat? x)))
+  (put 'make 'rational
+       (lambda (n d) (tag (make-rat n d))))
+  (put 'raise 'rational
+       (lambda (x) (make-real (/ (numer x) (denom x)))))
   'done)
 
 (define (apply-generic op . args)
@@ -209,27 +275,30 @@
             (list op type-tags))))))
 
 (define (attach-tag type-tag contents)
-  (cons type-tag contents))
+  (if (number? contents)
+      contents
+      (cons type-tag contents)))
 
 (define (type-tag datum)
-  (if (pair? datum)
-      (car datum)
-      (error "Bad tagged datum:
-              TYPE-TAG" datum)))
+  (cond ((number? datum) 'scheme-number)
+        ((pair? datum) (car datum))
+        (error "Bad tagged datum: TYPE-TAG" datum)))
 
 (define (contents datum)
-  (if (pair? datum)
-      (cdr datum)
-      (error "Bad tagged datum:
-              CONTENTS" datum)))
+  (cond ((number? datum) datum)
+        ((pair? datum) (cdr datum))
+        (else (error "Bad tagged datum: CONTENTS" datum))))
 
 (install-scheme-number-package)
+(install-rational-package)
 (install-polynomial-package)
 
-(define (make-polynomial var terms)
-  ((get 'make 'polynomial) var terms))
 (define (make-scheme-number n)
   ((get 'make 'scheme-number) n))
+(define (make-rational n d)
+  ((get 'make 'rational) n d))
+(define (make-polynomial var terms)
+  ((get 'make 'polynomial) var terms))
 (define (=zero? x)
   (apply-generic '=zero? x))
 (define (add x y)
@@ -242,15 +311,13 @@
   (apply-generic 'minus x))
 (define (sub x y)
   (apply-generic 'add x (minus y)))
+(define (greatest-common-divisor x y)
+  (apply-generic 'greatest-common-divisor x y))
 
+(define p1 (make-polynomial 'x '((2 1) (1 -2) (0 1))))
+(define p2 (make-polynomial 'x '((2 11) (0 7))))
+(define p3 (make-polynomial 'x '((1 13) (0 5))))
+(define q1 (mul p1 p2))
+(define q2 (mul p1 p3))
 
-;; Testing
-(define n1 (make-scheme-number 1))
-(define n-1 (make-scheme-number -1))
-
-(define p1 (make-polynomial 'x (list (list 5 n1) (list 0 n-1))))
-(define p2 (make-polynomial 'x (list (list 2 n1) (list 0 n-1))))
-
-(define terms1 (cdr (cdr p1)))
-(define terms2 (cdr (cdr p2)))
-(div p1 p2)
+(greatest-common-divisor q1 q2)
