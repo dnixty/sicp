@@ -95,10 +95,16 @@
 
   ;; procedures used by add-poly
   (define (add-poly p1 p2)
-    (cond ((variable<? (variable p1) (variable p2))
+    (cond ((same-variable? (variable p1) 'fallback-var)
+           (add-poly (make-poly (variable p2) (term-list p1))
+                     p2))
+          ((same-variable? (variable p2) 'fallback-var)
+           (add-poly p1
+                     (make-poly (variable p1) (term-list p2))))
+          ((variable<? (variable p1) (variable p2))
            (add-poly p1 (normalize p2 (variable p1))))
           ((variable>? (variable p1) (variable p2))
-           (add-poly p2 p1))
+           (add-poly (p2 p1)))
           (else (make-poly (variable p1)
                            (add-terms (term-list p1)
                                       (term-list p2))))))
@@ -170,6 +176,7 @@
        (lambda (p)
          (tag (make-poly (variable p)
                          (minus-all-terms (term-list p))))))
+  (put 'raise '(polynomial) (lambda (p) (tag p)))
   'done)
 
 (define (install-rational-package)
@@ -277,11 +284,11 @@
          (tag (make-from-mag-ang r a))))
   (put 'raise 'complex
        (lambda (x) (make-polynomial 'fallback-var
-                                    (list (list 0 (drop x))))))
+                                    (list (list 0 (drop (tag x)))))))
   (put 'project '(complex)
        (lambda (x)
          (apply-generic 'project x)))
-  (put 'equ? '(complex complex) equ?)
+  (put 'equ? '(complex complex) (lambda (x y) (equ? x y)))
   'done)
 
 (define (raise x)
@@ -386,6 +393,8 @@
                                      (list 1
                                            (make-polynomial 'y (list (list 2 n1)))))))
 
+(define r1 (make-rational 3 1))
+(define r2 (make-real 3))
 (define c1 (make-complex-from-real-imag 1 0))
 ;; 2x
 ;; 3y

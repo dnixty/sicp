@@ -1,0 +1,12 @@
+(define (cycle-in-list? x)
+   (let ((traversed '()))
+     (define (traverse x)
+       (cond ((null? x) #f)
+             ((memq x traversed) #t)
+             (else (set! traversed (cons x traversed))
+                   (traverse (cdr x)))))
+     (traverse x)))
+
+(define x (list 1 2 3))
+(set-cdr! x x)
+(cycle-in-list? x)

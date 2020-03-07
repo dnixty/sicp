@@ -1,0 +1,31 @@
+(define (make-account balance password)
+  (define (mf counter)
+    (define (withdraw amount)
+      (if (>= balance amount)
+          (begin (set! balance
+                       (- balance amount))
+                 balance)
+          "Insufficient funds"))
+    (define (deposit amount)
+      (set! balance (+ balance amount))
+      balance)
+    (define (call-the-cops x)
+      "Calling the cops")
+    (define (incorrect-password x)
+      (set! counter (+ counter 1))
+      "Incorrect password")
+    (define (dispatch p m)
+      (cond ((> counter 6) call-the-cops)
+            ((not (eq? p password)) incorrect-password)
+            ((eq? m 'withdraw) withdraw)
+            ((eq? m 'deposit) deposit)
+            (else (error "Unknown request:
+                 MAKE-ACCOUNT" m))))
+    dispatch)
+  (mf 0))
+
+(define acc
+  (make-account 100 'secret-password))
+
+((acc 'secret-password 'withdraw) 140)
+((acc 'some-other-password 'deposit) 50)
