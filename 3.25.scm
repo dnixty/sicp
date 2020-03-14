@@ -1,0 +1,36 @@
+(define (make-table)
+  (let ((local-table (list '*table*)))
+    (define (lookup key-list)
+      (define (iter keys table)
+        (if (null? keys)
+            (cdr table)
+            (let ((record (assoc (car keys) (cdr table))))
+              (if record
+                  (iter (cdr keys) record)
+                  false))))
+      (iter key-list local-table))
+
+    (define (insert! key-list value)
+      (define (iter keys value table)
+        (let ((record (assoc (car keys) (cdr table))))
+          (if record
+              (if (null? (cdr keys))
+                  (set-cdr! record value)
+                  (iter (cdr keys) value record))
+              (begin (set-cdr! table (cons (list (car keys)) (cdr table)))
+                     (iter keys value table)))
+          'ok))
+      (iter key-list value local-table))
+
+    (define (dispatch m)
+      (cond ((eq? m 'lookup-proc) lookup)
+            ((eq? m 'insert-proc!) insert!)
+            (else (error "Unknown operation -- TABLE" m))))
+    dispatch))
+
+(define operation-table (make-table))
+(define get (operation-table 'lookup-proc))
+(define put (operation-table 'insert-proc!))
+
+(put '(two three five) 99)
+(get '(two three five))
